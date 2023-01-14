@@ -2008,6 +2008,36 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!1 &1636225512
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1636225513}
+  m_Layer: 0
+  m_Name: GroundCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1636225513
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1636225512}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.59, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 2076366427}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1843374772
 GameObject:
   m_ObjectHideFlags: 0
@@ -2333,16 +2363,15 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2076366427}
+  - component: {fileID: 2076366429}
   - component: {fileID: 2076366426}
   - component: {fileID: 2076366425}
   - component: {fileID: 2076366424}
-  - component: {fileID: 2076366423}
+  - component: {fileID: 2076366430}
+  - component: {fileID: 2076366428}
   - component: {fileID: 2076366422}
   - component: {fileID: 2076366421}
   - component: {fileID: 2076366420}
-  - component: {fileID: 2076366428}
-  - component: {fileID: 2076366429}
-  - component: {fileID: 2076366430}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -2359,7 +2388,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2076366419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ebd3c4194c1f482469442895984673c7, type: 3}
+  m_Script: {fileID: 11500000, guid: 6f3df980f6cb5544ba6dbddd04da302f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &2076366421
@@ -2371,14 +2400,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 2076366419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 44248db0df0421d4cb08f4a59ca7daca, type: 3}
+  m_Script: {fileID: 11500000, guid: c8fc2881b3645ad42b043b12a4795559, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _idle: PlayerIdle
-  _run: PlayerRun
-  _jump: PlayerJump
-  _fall: PlayerFall
-  _dash: PlayerDash
 --- !u!114 &2076366422
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2388,28 +2412,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 2076366419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 45bcc1f4f4a2fd1419cb1630fd103001, type: 3}
+  m_Script: {fileID: 11500000, guid: 700a9fb4807996142887207a9c904484, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _groundMask:
+  groundLayer:
     serializedVersion: 2
     m_Bits: 1024
---- !u!58 &2076366423
-CircleCollider2D:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2076366419}
-  m_Enabled: 1
-  m_Density: 1
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_UsedByEffector: 0
-  m_UsedByComposite: 0
-  m_Offset: {x: 0.05778885, y: -0.45405424}
-  serializedVersion: 2
-  m_Radius: 0.30186844
+  groundCheck: {fileID: 1636225513}
 --- !u!61 &2076366424
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -2423,7 +2432,7 @@ BoxCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0.048460007, y: 0.26388004}
+  m_Offset: {x: 0.06107527, y: -0.021324903}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -2434,7 +2443,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 0.653862, y: 1.1645167}
+  m_Size: {x: 0.51088905, y: 1.3648791}
   m_EdgeRadius: 0
 --- !u!50 &2076366425
 Rigidbody2D:
@@ -2478,7 +2487,8 @@ Transform:
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
-  m_Children: []
+  m_Children:
+  - {fileID: 1636225513}
   m_Father: {fileID: 0}
   m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -2491,7 +2501,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 2076366419}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5066c5058845c90499d43cf2056cef4b, type: 3}
+  m_Script: {fileID: 11500000, guid: 3aa0cfe31ded723468a61f3361cc5706, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!212 &2076366429
