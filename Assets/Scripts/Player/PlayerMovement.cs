@@ -5,23 +5,27 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
     private readonly float _speedPlayer = 10f;
-    private readonly float _jumpForce = 15f;
-
+    //private readonly float _jumpForce = 15f;
+    [SerializeField]private float _jumpForce = 15f;
     private Rigidbody2D _playerRB;
     private PlayerInput _playerInput;
     private PlayerCollision _playerColl;
+    private PlayerAnimationController _playerAmin;
 
     private void Start()
     {
         _playerRB = GetComponent<Rigidbody2D>();
         _playerInput = GetComponent<PlayerInput>();
         _playerColl = GetComponent<PlayerCollision>();
+        _playerAmin = GetComponent<PlayerAnimationController>();
     }
 
     private void FixedUpdate()
     {
+
         Movement();
         Jumping();
+
     }
 
     private void Movement()

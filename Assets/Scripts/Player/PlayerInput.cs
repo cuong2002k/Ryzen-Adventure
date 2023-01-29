@@ -13,9 +13,11 @@ public class PlayerInput : MonoBehaviour
 
     private void Update()
     {
+        
         MoveDirection = Input.GetAxisRaw("Horizontal");
         IsJumping = Input.GetKey(KeyCode.Space);
         IsAttack = Input.GetKeyDown(KeyCode.J);
         SwapWeapon = Input.GetKeyDown(KeyCode.W);
+
     }
 }

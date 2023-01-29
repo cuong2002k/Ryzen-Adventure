@@ -21,18 +21,22 @@ public class PlayerAnimationController : MonoBehaviour
 
     #region var
     private bool _isAtack = false; // check input attack
-    private bool _isHit = false;
-    private bool _isDead = false;
-    private bool _isRun = false;
-    private bool _isweapon = false;
-    private bool _dontTimeSwapWeapon = false;
+    public bool AirAttack { get; private set; } = false;
+    private bool _isHurt = false; // hurt
+    private bool _isDead = false; // dead
+    private bool _isRun = false; // running
+    private bool _isweapon = false; // Weapon or punch
+    private bool _SwapWeapon = false;
+    private string correctAnim; // current amin
     private int _coutAttack = 0; // cout attack input
-    private float _maxTimeComboDelay = 0.9f; // time delay combo 
+    private float _maxTimeComboDelay = 1f; // time delay combo 
     private float _lastClickTime = 0; // last click when press attack
+    private float _delayAmin = 0.35f;
     #endregion
 
     private void Start()
     {
+
         _playerAmin = GetComponent<Animator>();
         _playerInput = GetComponent<PlayerInput>();
         _playerMove = GetComponent<PlayerMovement>();
@@ -44,47 +48,60 @@ public class PlayerAnimationController : MonoBehaviour
 
     private void Update()
     {
-        if (Time.time - _lastClickTime > _maxTimeComboDelay)
+        // swap Weapon
+        if (_playerInput.SwapWeapon)
         {
-            _coutAttack = 0;
+            _isweapon = !_isweapon;
+            correctAnim = (_isweapon) ? StateAnimation.Weapon : StateAnimation.NoWeapon;
+            _SwapWeapon = true;
+            ChangeStateAmin(correctAnim);
+            this.Wait(0.35f, () => { _SwapWeapon = false; });
         }
 
-        if (_playerInput.IsAttack && !_isAtack && _playerColl.IsGrounded)
+        RestartComboAttack();
+
+        // Combo attack
+        if (_playerInput.IsAttack && !_isAtack)
         {
             _isAtack = true;
-            StartCombo();
+            _playerAttack.PlayerAttack();
+            ComboPlayer();
         }
-        _isRun = _playerColl.IsGrounded && !_isAtack && !_isHit && !_isDead;
+
+        //end combo air attack
+        if (_coutAttack == 3 && AirAttack && _playerColl.IsGrounded)
+        {
+            ChangeStateAmin(((_isweapon) ? StateAnimation.AirAttack : StateAnimation.AirPunch) + 3);
+            _coutAttack = 0;
+            _playerAttack.PlayerAttackBottom();
+            this.Wait(_delayAmin, () => { _isAtack = false; AirAttack = false; });
+        }
+
+        // check running
+        _isRun = _playerColl.IsGrounded && !_isAtack && !_isHurt && !_isDead;
+
+        //restart attack 
+        if (_playerInput.IsJumping) _coutAttack = 0;
+
     }
 
     private void FixedUpdate()
     {
 
-        string correctAnim;
-        if (_playerInput.SwapWeapon)
-        {
-            _isweapon = !_isweapon;
-            correctAnim = (_isweapon) ? StateAnimation.Weapon : StateAnimation.NoWeapon;
-            _dontTimeSwapWeapon = true;
-            ChangeStateAmin(correctAnim);
-            this.Wait(0.35f, () =>
-            {
-                _dontTimeSwapWeapon = false;
-            });
-        }
-
-        if (_isRun && !_dontTimeSwapWeapon)
+        if (_isRun && !_SwapWeapon && !AirAttack)
         {
             correctAnim = _playerInput.MoveDirection != 0 ? StateAnimation.Move :
                         (_isweapon == false) ? StateAnimation.Idle : StateAnimation.IdleWeapon;
             ChangeStateAmin(correctAnim);
         }
 
-
         if (!_playerColl.IsGrounded)
         {
-            correctAnim = _playerRB.velocity.y > .1f ? StateAnimation.Jump : StateAnimation.Fall;
-            ChangeStateAmin(correctAnim);
+            if (!_isAtack)
+            {
+                correctAnim = _playerRB.velocity.y > .1f ? StateAnimation.Jump : StateAnimation.Fall;
+                ChangeStateAmin(correctAnim);
+            }
         }
         _playerAmin.SetFloat("MoveX", _playerInput.MoveDirection);
 
@@ -92,40 +109,87 @@ public class PlayerAnimationController : MonoBehaviour
 
     private void ChangeStateAmin(string state)
     {
+
         _playerAmin.Play(state);
+
     }
 
-    private void StartCombo()
+    private void ComboPlayer()
     {
         _lastClickTime = Time.time;
         _coutAttack += 1;
-        if (_coutAttack > 3)
-        {
-            _coutAttack = 1;
+        if (_coutAttack > 3) _coutAttack = 1;
+        if (_playerColl.IsGrounded)
+            ComboGroundPlayer();
+        else ComboAirPlayer();
 
+    }
+
+    private void ComboGroundPlayer()
+    {
+
+        if (_isweapon)
+        {
+            correctAnim = StateAnimation.Attack + _coutAttack; // if isweapon => combo weapon
+            SoundsPlayer.soundPlayer.SoundWeapon();
         }
-        ChangeStateAmin(StateAnimation.Attack + _coutAttack);
-        _playerAttack.PlayerAttack();
-
-        this.Wait(0.45f, () =>
+        else
         {
-            _isAtack = false;
-        });
+            correctAnim = StateAnimation.Puch + _coutAttack; // if !isweapon => combo punch
+            SoundsPlayer.soundPlayer.SoundPunch();
+        }
+        ChangeStateAmin(correctAnim);
+        this.Wait(_delayAmin, () => { _isAtack = false; });
+
+    }
+
+    private void ComboAirPlayer()
+    {
+
+        if (_coutAttack < 3)
+        {
+            float attackJumpForce = 9f;
+            correctAnim = (_isweapon == false) ?
+                        StateAnimation.AirPunch + _coutAttack : StateAnimation.AirAttack + _coutAttack;
+            if (_isweapon == true)
+            {
+                SoundsPlayer.soundPlayer.SoundWeapon();
+            }
+            else
+            {
+                SoundsPlayer.soundPlayer.SoundPunch();
+            }
+            this.Wait(_delayAmin, () => { _isAtack = false; });
+            _playerRB.velocity = new Vector2(_playerRB.velocity.x, attackJumpForce);
+        }
+        else
+        {
+            correctAnim = (_isweapon == false) ? StateAnimation.AirPunch : StateAnimation.AirAttack;
+            correctAnim += 4;
+            AirAttack = true;
+        }
+        ChangeStateAmin(correctAnim);
+
     }
 
     public void Hit()
     {
         ChangeStateAmin(StateAnimation.Hit);
-        _isHit = true;
-        this.Wait(0.5f, () =>
-        {
-            _isHit = false;
-        });
+        SoundsPlayer.soundPlayer.SoundHurt();
+        _isHurt = true;
+        this.Wait(_delayAmin, () => { _isHurt = false; });
+
     }
 
     public void Die()
     {
         ChangeStateAmin(StateAnimation.Die);
         _isDead = true;
+    }
+
+    private void RestartComboAttack()
+    {
+        // restart combo attack
+        if (Time.time - _lastClickTime > _maxTimeComboDelay) _coutAttack = 0;
     }
 }

@@ -4,45 +4,45 @@ using UnityEngine;
 
 public class PlayerAttacking : MonoBehaviour
 {
+    private int _playerDame { get; set; } = 30; // dame
     #region var import from game engine
 
-    [SerializeField] private Transform _attackPoint; //attack point draw gimoz
+    [SerializeField] private Transform _attackPointDirection; //attack point draw gimoz
+    [SerializeField] private Transform _attackPointBottom; //attack point draw gimoz
     [SerializeField] private LayerMask _enemyLayer; // layer get attack
     #endregion end import
 
-    #region var scripts
-    private PlayerController _playerCtrl;
-    #endregion
-
     #region var
-    private float _attackRange = 0.7f;
+    [SerializeField] private float _attackRange = 0.7f;
     #endregion
 
 
 
-    private void Start()
-    {
-        _playerCtrl = GetComponent<PlayerController>();
-        
-
-    }
 
     //player attack -> Enemy , Boss, ....
     public void PlayerAttack()
     {
-        Collider2D[] hitEnemy = Physics2D.OverlapCircleAll(_attackPoint.position, _attackRange, _enemyLayer);
+        Collider2D[] hitEnemy = Physics2D.OverlapCircleAll(_attackPointDirection.position, _attackRange, _enemyLayer);
         foreach (Collider2D enemy in hitEnemy)
         {
-            enemy.GetComponent<Enemy>().TakeDamageEnemy(_playerCtrl.playerDame);
+            enemy.GetComponent<Enemy>().TakeDamageEnemy(_playerDame, this.transform);
         }
-
-
     }
 
-    private void OnDrawGizmos()
+    public void PlayerAttackBottom()
     {
-        if (_attackPoint == null) return;
-        Gizmos.DrawSphere(_attackPoint.position, _attackRange);
+        Collider2D[] hitEnemy = Physics2D.OverlapCircleAll(_attackPointBottom.position, _attackRange * 3, _enemyLayer);
+        foreach (Collider2D enemy in hitEnemy)
+        {
+            enemy.GetComponent<Enemy>().TakeDamageEnemy(_playerDame, this.transform);
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (_attackPointDirection == null) return;
+        Gizmos.DrawWireSphere(_attackPointDirection.position, _attackRange);
+        Gizmos.DrawWireSphere(_attackPointBottom.position, _attackRange * 3);
     }
 
 

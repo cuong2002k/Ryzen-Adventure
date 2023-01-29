@@ -5,84 +5,148 @@ using UnityEngine;
 public class Boar : Enemy
 {
     #region Animator
-    private readonly string _idle = "EnemyIdle";
+
     private readonly string _walk = "EnemyWalk";
-    private readonly string _run = "EnemyRunning";
-    private readonly string _hit = "EnemyHit";
+    private readonly string _hurt = "EnemyHit";
+
     #endregion Animator
 
-    private Rigidbody2D _enemyRb;
-    private Animator _enemyAmin;
-    private Transform _movePointTarget;
-
+    #region 
+    private const string _LEFT = "left";
+    private const string _RIGHT = "right";
+    private string _facingDirection;
+    [SerializeField] private float _castLength;
+    [SerializeField] private Transform _castPosition; // get positon casting with Ground and wall
+    private Vector3 _baseScale;
+    #endregion
+    private Animator _boarAmin;
     private bool _isDead = false;
-    private bool _isHit = false;
-
+    private bool _isHurt = false;
+    private string _currentState;
+    private float _AminDelay = 0.35f;
     protected override void Start()
     {
+
         base.Start();
-        _enemyRb = GetComponent<Rigidbody2D>();
-        _enemyAmin = GetComponent<Animator>();
-        _movePointTarget = pointA;
+        _facingDirection = _RIGHT;
+        _baseScale = transform.localScale;
+        _boarAmin = GetComponent<Animator>();
 
     }
 
-    protected override void Update()
+    private void FixedUpdate()
     {
-        base.Update();
-        if (!_isDead && !_isHit)
+        if (!_isDead && !_isHurt)
         {
             Moving();
+            if (CheckGround() || !CheckNear())
+            {
+                if (_facingDirection == _LEFT) ChangeScale(_RIGHT);
+                else if (_facingDirection == _RIGHT) ChangeScale(_LEFT);
+            }
         }
     }
 
     protected void Moving()
     {
-        _enemyAmin.Play(_run);
-        if (Vector2.Distance(this.transform.position, pointA.position) < 0.01f)
-        {
-            _movePointTarget = pointB;
-            Flip(-1);
-        }
-        if (Vector2.Distance(this.transform.position, pointB.position) < 0.01f)
-        {
-            _movePointTarget = pointA;
-            Flip(1);
-        }
-        Vector2 target = Vector2.MoveTowards(transform.position, _movePointTarget.position, enemySpeed * Time.deltaTime);
-        transform.position = target;
+        float MoveX = enemySpeed;
+        if (_facingDirection == _LEFT) MoveX = -enemySpeed;
+        _enemyRb.velocity = new Vector2(MoveX, _enemyRb.velocity.y);
+        ChangeAnimation(_walk);
     }
 
-    public override void TakeDamageEnemy(int Damage)
+    private bool CheckGround()
     {
-        base.TakeDamageEnemy(Damage);
-        _enemyAmin.Play(_hit);
-        _isHit = true;
-        this.Wait(0.3f, () =>
+        bool isGround = false;
+        string direction = _facingDirection;
+        float targetLengCast = _castLength;
+
+        if (direction == _LEFT)
         {
-            _isHit = false;
-        });
+            targetLengCast = -targetLengCast;
+        }
+
+        Vector3 targetPosCast = _castPosition.position;
+        targetPosCast.x += targetLengCast;
+
+        Debug.DrawLine(_castPosition.position, targetPosCast, Color.red);
+        if (Physics2D.Linecast(_castPosition.position, targetPosCast, 1 << LayerMask.NameToLayer("IsGround")))
+        {
+            isGround = true;
+        }
+
+        return isGround;
+    }
+
+    private bool CheckNear()
+    {
+        bool isGround = false;
+        string direction = _facingDirection;
+        float targetLengCast = _castLength;
+        Vector3 targetPosCast = _castPosition.position;
+        targetPosCast.y -= targetLengCast;
+        Debug.DrawLine(_castPosition.position, targetPosCast, Color.blue);
+        if (Physics2D.Linecast(_castPosition.position, targetPosCast, 1 << LayerMask.NameToLayer("IsGround")))
+        {
+            isGround = true;
+        }
+
+        return isGround;
+    }
+
+    private void ChangeScale(string newDirection)
+    {
+        Vector3 newScale = _baseScale;
+        if (newDirection == _RIGHT)
+        {
+            newScale.x = _baseScale.x;
+        }
+        else if (newDirection == _LEFT)
+        {
+            newScale.x = -_baseScale.x;
+        }
+
+        transform.localScale = newScale;
+        _facingDirection = newDirection;
+
+    }
+
+    public override void TakeDamageEnemy(int Damage, Transform playerPos)
+    {
+
+        base.TakeDamageEnemy(Damage, playerPos);
+        ChangeAnimation(_hurt);
+        _isHurt = true;
+        KnockBack(playerPos);
+        this.Wait(_AminDelay, () => { _isHurt = false; });
+
     }
 
     protected override void Die()
     {
+
         base.Die();
-        this.Wait(0.3f, () =>
-        {
-            Destroy(this.gameObject);
-        });
+        this.Wait(_AminDelay, () => { Destroy(this.transform.root.gameObject); });
+
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+
         if (other.gameObject.CompareTag("Player"))
         {
-            other.transform.GetComponent<PlayerController>().TakeDame(dameEnemy);
+            other.transform.GetComponent<PlayerHeal>().TakeDame(dameEnemy);
         }
+
     }
 
-    void Flip(int direction){
-        _enemyAmin.transform.localScale = new Vector3(direction, 1, 1);
+    private void ChangeAnimation(string state)
+    {
+
+        if (state == _currentState) return;
+        _boarAmin.Play(state);
+        _currentState = state;
+
     }
 
 }
