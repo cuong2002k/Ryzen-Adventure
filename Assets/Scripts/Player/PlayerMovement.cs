@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using DG.Tweening;
 using UnityEngine;
-
 public class PlayerMovement : MonoBehaviour
 {
     [Header("Components")]
@@ -11,31 +11,25 @@ public class PlayerMovement : MonoBehaviour
     [Space]
     [Header("Movement")]
     private float _movementAccelration = 70f; // gia tốc
-    private float _maxMoveSpeed = 12f;   // tốc độ di chuyển tối đa
+    private float _maxMoveSpeed = 16f;   // tốc độ di chuyển tối đa
     [SerializeField] private float _groundlinearDrag = 10f; // hệ số ma sát chuyển động
-    private bool _changeDirection => (_movementInputDirection < 0 && _playerRb.velocity.x > 0)
-                                    || (_movementInputDirection > 0 && _playerRb.velocity.x < 0);
-    private float _movementInputDirection;
+    private bool _changeDirection => (_horizontal < 0 && _playerRb.velocity.x > 0)
+                                    || (_horizontal > 0 && _playerRb.velocity.x < 0);
+    private float _horizontal;
+    private float _vertical;
     private bool _isFacingRight = true;
     private bool _isWalk;
 
-
-    [Space]
-    [Header("Check Collision")]
-    [SerializeField] private Transform _groundCheck;
-    [SerializeField] private Transform _wallcheck;
-    [SerializeField] private LayerMask _groundLayer;
-    [Range(0, 1), SerializeField] private float _groundCheckRadius;
-    [Range(0, 1), SerializeField] private float _wallCheckLength;
-    private bool _isGrounded;
-    private bool _isTouchingWall;
+    [SerializeField] private PlayerCollision _PlayerCollision;
+    [SerializeField] private bool _isGrounded;
+    [SerializeField] private bool _isTouchingWall;
 
 
     [Space]
     [Header("Jumping")]
-    [SerializeField, Range(0, 50)] private float _jumpforce = 50f;
-    [SerializeField, Range(0, 20)] private float _fallMultiplier = 12f;
-    [SerializeField, Range(0, 20)] private float _lowfallMultiplier = 9f;
+    [SerializeField, Range(0, 50)] private float _jumpforce = 30f;
+    [SerializeField, Range(0, 20)] private float _fallMultiplier = 6f;
+    [SerializeField, Range(0, 20)] private float _lowfallMultiplier = 3f;
     private float _baseGravityScale = 1f;
     private float _airLinearDrag = 2.5f;
     private float _coyoteTimer = 0.2f;
@@ -50,9 +44,23 @@ public class PlayerMovement : MonoBehaviour
     private float _wallSlidingSpeed = 2f;
     private bool _isWallSliding = false;
 
+    [Space]
+    [Header("Dash")]
+    [SerializeField] private float _dashSpeed = 50f;
+    [SerializeField] private float _dragDashLinear = 100f;
+    private bool _isDashed = false;
+    [SerializeField] private float _dashTimer = 0.1f;
+    private bool _canDash = true;
 
 
-
+    [Space]
+    [Header("Partical")]
+    public ParticleSystem dashParticle;
+    public ParticleSystem slideParticle;
+    public ParticleSystem jumpParticle;
+    public ParticleSystem wallJumpParticle;
+    [SerializeField] private RippleEffect rippleEffect;
+    [SerializeField] private GhostTrail ghostTrail;
     private void Start()
     {
         _playerRb = GetComponent<Rigidbody2D>();
@@ -70,17 +78,21 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
+        //Checkcollision();
+        _isGrounded = _PlayerCollision._isGrounded;
+        _isTouchingWall = _PlayerCollision._isTouchingWall;
         LinearDrag();
         Movement();
         Jumping();
-        Checkcollision();
         Falling();
         WallSliding();
+        CheckDashed();
     }
 
     private void CheckInput()
     {
-        _movementInputDirection = Input.GetAxisRaw("Horizontal");
+        _horizontal = Input.GetAxisRaw("Horizontal");
+        _vertical = Input.GetAxisRaw("Vertical");
 
         if (Input.GetKeyDown(KeyCode.X))
         {
@@ -102,7 +114,15 @@ public class PlayerMovement : MonoBehaviour
             _playerRb.velocity = new Vector2(_playerRb.velocity.x, _playerRb.velocity.y * _airMultiplier);
         }
 
+        if (Input.GetKeyDown(KeyCode.Z) && !_isDashed)
+        {
+            _isDashed = true;
+
+        }
+
     }
+
+
 
     private void UpdateAnimation()
     {
@@ -117,15 +137,16 @@ public class PlayerMovement : MonoBehaviour
 
         if (!_isWallSliding)
         {
-            _playerRb.velocity = new Vector2(_movementInputDirection * _movementAccelration, _playerRb.velocity.y);
+            _playerRb.velocity = new Vector2(_horizontal * _movementAccelration, _playerRb.velocity.y);
         }
 
         if (Mathf.Abs(_playerRb.velocity.x) > _maxMoveSpeed)
         {
-            _playerRb.velocity = new Vector2(_movementInputDirection * _maxMoveSpeed, _playerRb.velocity.y);
+            _playerRb.velocity = new Vector2(_horizontal * _maxMoveSpeed, _playerRb.velocity.y);
         }
 
-        _isWalk = (_movementInputDirection != 0);
+        _isWalk = (_playerRb.velocity.x != 0);
+
     }
 
     private void LinearDrag()
@@ -133,6 +154,7 @@ public class PlayerMovement : MonoBehaviour
         if (_isGrounded)
         {
             ApplyGroundLinearDrag();
+            _canDash = true;
         }
         else
         {
@@ -143,7 +165,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void ApplyGroundLinearDrag()
     {
-        if (Mathf.Abs(_movementInputDirection) < 0.4f || _changeDirection)
+        if (Mathf.Abs(_horizontal) < 0.4f || _changeDirection)
         {
             _playerRb.drag = _groundlinearDrag;
         }
@@ -168,12 +190,23 @@ public class PlayerMovement : MonoBehaviour
             _playerRb.AddForce(Vector2.up * _jumpforce, ForceMode2D.Impulse);
             _coyoteTimerCounter = 0;
             _jumpBufferCouter = 0;
+            JumpParticle().Play();
+
         }
     }
 
     private void CheckIfWallSliding()
     {
-        if (!_isGrounded && _isTouchingWall && _playerRb.velocity.y < 0 && _movementInputDirection != 0)
+        if (_isWallSliding)
+        {
+            slideParticle.Play();
+        }
+        else
+        {
+            slideParticle.Stop();
+        }
+
+        if (!_isGrounded && _isTouchingWall && _playerRb.velocity.y < 0 && _horizontal != 0)
         {
             _isWallSliding = true;
         }
@@ -187,8 +220,11 @@ public class PlayerMovement : MonoBehaviour
     {
         if (_isWallSliding)
         {
+            slideParticle.Play();
             if (_playerRb.velocity.y < -_wallSlidingSpeed)
+            {
                 _playerRb.velocity = new Vector2(_playerRb.velocity.x, -_wallSlidingSpeed);
+            }
         }
     }
 
@@ -204,6 +240,57 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 
+
+
+    private void CheckDashed()
+    {
+        if (_isDashed && _canDash)
+        {
+            Vector2 direction = new Vector2(_horizontal, _vertical);
+            if (direction == Vector2.zero)
+            {
+                direction = new Vector2(transform.localScale.x, 0f);
+            }
+            //StartCoroutine(Dash(direction));
+            Dash(direction.normalized);
+            
+            StartCoroutine(StopDash());
+        }
+    }
+
+    private IEnumerator StopDash()
+    {
+        CinemachineShake.instance.StartShakeCamera();
+        Camera.main.transform.DOComplete();
+        ghostTrail.ShowGhost();
+        // if (rippleEffect != null)
+        // {
+        //     rippleEffect.Emit(Camera.main.WorldToViewportPoint(new Vector3(transform.position.x, transform.position.y, 1f)));
+        // }
+        dashParticle.Play();
+
+        _playerRb.drag = _dragDashLinear;
+        _playerRb.gravityScale = 0;
+
+        yield return new WaitForSeconds(_dashTimer);
+        dashParticle.Stop();
+        _isDashed = false;
+        _canDash = false;
+    }
+    private void RigidbodyDrag(float x)
+    {
+        _playerRb.drag = x;
+    }
+    private void Dash(Vector2 direction)
+    {
+        if (!_isWallSliding)
+        {
+            _playerRb.velocity = direction * _dashSpeed;
+
+        }
+    }
+
+
     private void Falling()
     {
         if (_playerRb.velocity.y < 0)
@@ -213,7 +300,6 @@ public class PlayerMovement : MonoBehaviour
         else if (_playerRb.velocity.y > 0 && !Input.GetButtonUp("Jump"))
         {
             _playerRb.gravityScale = _lowfallMultiplier;
-            _coyoteTimerCounter = 0;
         }
         else
         {
@@ -223,8 +309,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void CheckDirection()
     {
-        if (_movementInputDirection != 0)
-            FlipDirection(_movementInputDirection > 0);
+        if (_horizontal != 0)
+            FlipDirection(_horizontal > 0);
     }
 
     private void FlipDirection(bool checkFacing)
@@ -238,17 +324,13 @@ public class PlayerMovement : MonoBehaviour
         transform.localScale = baseScale;
 
     }
-    private void Checkcollision()
-    {
-        _isGrounded = Physics2D.OverlapCircle(_groundCheck.position, _groundCheckRadius, _groundLayer);
-        bool direction = (transform.localScale.x > 0);
-        _isTouchingWall = Physics2D.Raycast(_wallcheck.position, (direction) ? Vector2.right : Vector2.left, _wallCheckLength, _groundLayer);
-    }
 
-    private void OnDrawGizmos()
+    private ParticleSystem JumpParticle()
     {
-        Gizmos.DrawWireSphere(_groundCheck.position, _groundCheckRadius);
-        bool direction = (transform.localScale.x > 0);
-        Gizmos.DrawLine(_wallcheck.position, new Vector3(_wallcheck.position.x + ((direction) ? _wallCheckLength : -_wallCheckLength), _wallcheck.position.y, _wallcheck.position.z));
+        if (_isWallSliding)
+        {
+            return wallJumpParticle;
+        }
+        return jumpParticle;
     }
 }
