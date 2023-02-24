@@ -12,8 +12,12 @@ public class GhostTrail : MonoBehaviour
     public float ghostInterval;
     public float fadeTime;
 
+    public float fadeDistance;
+
     private void Start()
     {
+
+
         sr = GetComponent<SpriteRenderer>();
     }
 
@@ -23,9 +27,10 @@ public class GhostTrail : MonoBehaviour
 
         for (int i = 0; i < ghostsParent.childCount; i++)
         {
+
             Transform currentGhost = ghostsParent.GetChild(i);
             float positionx = move.transform.position.x;
-            positionx = (positionx > 0) ? -0.3f : 0.3f;
+            positionx = (positionx > 0) ? -fadeDistance : fadeDistance;
             Vector3 pos = new Vector3(move.transform.position.x + positionx, move.transform.position.y, move.transform.position.z);
             s.AppendCallback(() => currentGhost.position = pos);
             // s.AppendCallback(() => currentGhost.GetComponent<SpriteRenderer>().flipX = anim.sr.flipX);

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cinemachine;
@@ -7,17 +8,21 @@ public class CinemachineShake : MonoBehaviour
     // Start is called before the first frame update
     private CinemachineVirtualCamera cinemachineVirtualCamera;
     private CinemachineBasicMultiChannelPerlin cinemachineBasicMultiChannelPerlin;
-    public static CinemachineShake instance;
+
+    public static Action Event;
     [SerializeField] private float _shakeIntensity = 1f;
     private float _shakeTimer = 0.2f;
     private float _shakeCounter;
     void Start()
     {
         cinemachineVirtualCamera = GetComponent<CinemachineVirtualCamera>();
-        instance = this;
-
+        Event += StartShakeCamera;
     }
 
+    private void OnDestroy()
+    {
+        Event -= StartShakeCamera;
+    }
     public void StartShakeCamera()
     {
         cinemachineBasicMultiChannelPerlin = cinemachineVirtualCamera.GetCinemachineComponent<CinemachineBasicMultiChannelPerlin>();

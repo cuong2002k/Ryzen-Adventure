@@ -6,7 +6,6 @@ public class PlayerSound : MonoBehaviour
 {
     [SerializeField] private PlayerCollision _playerCollision;
     private AudioSource _soundManager;
-
     [SerializeField] private AudioClip _touchGroundSound;
     private bool _isFlying;
 
@@ -28,7 +27,8 @@ public class PlayerSound : MonoBehaviour
     {
         if (_isFlying && _playerCollision._isGrounded)
         {
-            _soundManager.PlayOneShot(_touchGroundSound);
+            if(!_soundManager.isPlaying)
+                _soundManager.PlayOneShot(_touchGroundSound);
             _isFlying = false;
         }
     }

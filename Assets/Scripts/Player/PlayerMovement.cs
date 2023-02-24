@@ -11,7 +11,7 @@ public class PlayerMovement : MonoBehaviour
     [Space]
     [Header("Movement")]
     private float _movementAccelration = 70f; // gia tốc
-    private float _maxMoveSpeed = 16f;   // tốc độ di chuyển tối đa
+    private float _maxMoveSpeed = 13f;   // tốc độ di chuyển tối đa
     [SerializeField] private float _groundlinearDrag = 10f; // hệ số ma sát chuyển động
     private bool _changeDirection => (_horizontal < 0 && _playerRb.velocity.x > 0)
                                     || (_horizontal > 0 && _playerRb.velocity.x < 0);
@@ -20,9 +20,11 @@ public class PlayerMovement : MonoBehaviour
     private bool _isFacingRight = true;
     private bool _isWalk;
 
+    [Space]
+    [Header("Collison")]
     [SerializeField] private PlayerCollision _PlayerCollision;
-    [SerializeField] private bool _isGrounded;
-    [SerializeField] private bool _isTouchingWall;
+    private bool _isGrounded;
+    private bool _isTouchingWall;
 
 
     [Space]
@@ -33,11 +35,12 @@ public class PlayerMovement : MonoBehaviour
     private float _baseGravityScale = 1f;
     private float _airLinearDrag = 2.5f;
     private float _coyoteTimer = 0.2f;
+    private float _jumpBufferTimer = 0.2f;
     [SerializeField] private float _coyoteTimerCounter;
-    private float _jumpBufferTimer = 0.25f;
     [SerializeField] private float _jumpBufferCouter;
     private float _airMultiplier = 0.5f;
     private bool _canJumping = false;
+
 
     [Space]
     [Header("Wall Sliding // wall jumping")]
@@ -59,10 +62,15 @@ public class PlayerMovement : MonoBehaviour
     public ParticleSystem slideParticle;
     public ParticleSystem jumpParticle;
     public ParticleSystem wallJumpParticle;
-    [SerializeField] private RippleEffect rippleEffect;
     [SerializeField] private GhostTrail ghostTrail;
+
+
+    [Header("Audio")]
+    [SerializeField] private AudioClip _audioJumping;
+
     private void Start()
     {
+
         _playerRb = GetComponent<Rigidbody2D>();
         _playerAnimation = GetComponent<Animator>();
     }
@@ -186,6 +194,7 @@ public class PlayerMovement : MonoBehaviour
         if (_canJumping)
         {
             _canJumping = false;
+            SoundManager.HandleSound?.Invoke(_audioJumping);
             _playerRb.velocity = new Vector2(_playerRb.velocity.x, 0f);
             _playerRb.AddForce(Vector2.up * _jumpforce, ForceMode2D.Impulse);
             _coyoteTimerCounter = 0;
@@ -253,20 +262,16 @@ public class PlayerMovement : MonoBehaviour
             }
             //StartCoroutine(Dash(direction));
             Dash(direction.normalized);
-            
             StartCoroutine(StopDash());
         }
     }
 
     private IEnumerator StopDash()
     {
-        CinemachineShake.instance.StartShakeCamera();
+        // CinemachineShake.instance.StartShakeCamera();
+        CinemachineShake.Event?.Invoke();
         Camera.main.transform.DOComplete();
         ghostTrail.ShowGhost();
-        // if (rippleEffect != null)
-        // {
-        //     rippleEffect.Emit(Camera.main.WorldToViewportPoint(new Vector3(transform.position.x, transform.position.y, 1f)));
-        // }
         dashParticle.Play();
 
         _playerRb.drag = _dragDashLinear;

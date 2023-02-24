@@ -14,7 +14,8 @@ public class PlayerCollision : MonoBehaviour
     public bool _isGrounded;
     public bool _isTouchingWall;
 
-    private void FixedUpdate() {
+    private void FixedUpdate()
+    {
         Checkcollision();
     }
     private void Checkcollision()
